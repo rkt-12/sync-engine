@@ -4,8 +4,8 @@ package crdt
 // used for both CRDT elements and operations.For more details see docs/crdt-specification.md.
 
 type Identifier struct {
-	ClientID uint64
-	Counter  uint64
+	ClientID uint64 `json:"clientId"`
+	Counter  uint64 `json:"counter"`
 }
 
 // zeroClientID is reserved and never assigned to a real client.
