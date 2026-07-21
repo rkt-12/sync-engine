@@ -101,17 +101,31 @@ func (d *Document) Delete(op DeleteOperation) error {
 // Materialize returns the visible document text: every non-tombstoned element's value, concatenated in document order.
 func (d *Document) Materialize() string {
 	var b strings.Builder
-	d.materializeInto(&b, ElementID(RootID))
-	return b.String()
-}
-
-func (d *Document) materializeInto(b *strings.Builder, parentID ElementID) {
-	for _, childID := range d.children[parentID] {
-		el := d.elements[childID]
+	d.walk(ElementID(RootID), func(_ ElementID, el *element) {
 		if !el.deleted {
 			b.WriteRune(el.value)
 		}
-		d.materializeInto(b, childID)
+	})
+	return b.String()
+}
+
+// VisibleSequence returns the ElementIDs of all non-tombstoned elements, in document order.
+func (d *Document) VisibleSequence() []ElementID {
+	var out []ElementID
+	d.walk(ElementID(RootID), func(id ElementID, el *element) {
+		if !el.deleted {
+			out = append(out, id)
+		}
+	})
+	return out
+}
+
+// walk performs a depth-first traversal of the tree rooted at parentID, in document order
+func (d *Document) walk(parentID ElementID, visit func(ElementID, *element)) {
+	for _, childID := range d.children[parentID] {
+		el := d.elements[childID]
+		visit(childID, el)
+		d.walk(childID, visit)
 	}
 }
 
@@ -124,7 +138,6 @@ func (d *Document) insertSorted(parentID, childID ElementID) {
 	for idx < len(siblings) && Identifier(siblings[idx]).Greater(Identifier(childID)) {
 		idx++
 	}
-
 	siblings = append(siblings, ElementID{})
 	copy(siblings[idx+1:], siblings[idx:])
 	siblings[idx] = childID

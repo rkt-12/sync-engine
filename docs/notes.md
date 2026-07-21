@@ -7,3 +7,5 @@ Commands -
 
 Notes- 
 1. Any function whose name starts with Test is automatically a test function.
+2. Package crdt contains all the components of the crdt engine and their tests.
+3. Package simulation implements a in-memory distributed-system simulator for the CRDT engine. It requires no real WebSockets, no PostgreSQL, and no sleeps.
