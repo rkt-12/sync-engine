@@ -4,6 +4,7 @@ Commands -
 3. ```go vet ./...``` -> this is a static analysis tool that looks for likely bugs and suspicious code in Go program. If it prints nothing, means no bugs.
 4. ```go test -v ./internal/crdt/...``` -> builds and runs all the tests in the internal/crdt package and any of its subpackages , -v for verbose.
 5. ```go test -race ./internal/crdt/...``` -> in this -race checks if there are no unsynchronized concurrent reads or writes to shared memory. this is specifically for clock (PS - this didnt run due to system issues)
+6. ```go clean -testcache``` -> this cleans the cached data (used for removing cache from database layer)
 
 Notes- 
 1. Any function whose name starts with Test is automatically a test function.
