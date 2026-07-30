@@ -11,3 +11,4 @@ Notes-
 2. Package crdt contains all the components of the crdt engine and their tests.
 3. Package simulation implements a in-memory distributed-system simulator for the CRDT engine. It requires no real WebSockets, no PostgreSQL, and no sleeps.
 4. Package protocol defines the versioned WebSocket wire protocol between clients and the synchronization server.
+5. Package sync implements the WebSocket connection layer: per-connection read/write pumps, document rooms that serialize CRDT application and broadcast, and room/connection lifecycle management.
