@@ -38,8 +38,12 @@ func TestOperationStore_AppendAndLoad_InsertRoundTrip(t *testing.T) {
 		Value:           'a',
 	}
 
-	if err := ops.AppendOperation(ctx, original); err != nil {
+	sequenceID, err := ops.AppendOperation(ctx, original)
+	if err != nil {
 		t.Fatalf("AppendOperation failed: %v", err)
+	}
+	if sequenceID <= 0 {
+		t.Errorf("expected a positive sequence_id, got %d", sequenceID)
 	}
 
 	loaded, err := ops.LoadOperations(ctx, docID)
@@ -86,11 +90,16 @@ func TestOperationStore_AppendAndLoad_DeleteRoundTrip(t *testing.T) {
 		TargetElementID: insert.ElementID,
 	}
 
-	if err := ops.AppendOperation(ctx, insert); err != nil {
+	insertSeq, err := ops.AppendOperation(ctx, insert)
+	if err != nil {
 		t.Fatalf("AppendOperation(insert) failed: %v", err)
 	}
-	if err := ops.AppendOperation(ctx, del); err != nil {
+	deleteSeq, err := ops.AppendOperation(ctx, del)
+	if err != nil {
 		t.Fatalf("AppendOperation(delete) failed: %v", err)
+	}
+	if deleteSeq <= insertSeq {
+		t.Errorf("expected delete's sequence_id (%d) to be greater than insert's (%d)", deleteSeq, insertSeq)
 	}
 
 	loaded, err := ops.LoadOperations(ctx, docID)
@@ -130,9 +139,20 @@ func TestOperationStore_AppendOperation_IdempotentAtDatabaseLayer(t *testing.T) 
 		Value:           'a',
 	}
 
+	var firstSequence int64
 	for i := 0; i < 3; i++ {
-		if err := ops.AppendOperation(ctx, op); err != nil {
+		sequenceID, err := ops.AppendOperation(ctx, op)
+		if err != nil {
 			t.Fatalf("AppendOperation attempt %d failed: %v", i+1, err)
+		}
+		if i == 0 {
+			firstSequence = sequenceID
+			if firstSequence <= 0 {
+				t.Fatalf("expected a positive sequence_id on first append, got %d", firstSequence)
+			}
+		} else if sequenceID != firstSequence {
+			t.Errorf("attempt %d: expected the same sequence_id (%d) as the first append, got %d",
+				i+1, firstSequence, sequenceID)
 		}
 	}
 
@@ -195,7 +215,7 @@ func TestOperationStore_Replay_MatchesInMemoryApplication(t *testing.T) {
 
 	// Persist the same operations.
 	for _, op := range ops {
-		if err := opStore.AppendOperation(ctx, op); err != nil {
+		if _, err := opStore.AppendOperation(ctx, op); err != nil {
 			t.Fatalf("AppendOperation(%+v) failed: %v", op, err)
 		}
 	}
@@ -231,6 +251,88 @@ func TestOperationStore_LoadOperations_EmptyDocument(t *testing.T) {
 	}
 }
 
+func TestOperationStore_LoadOperationsAfter_Pagination(t *testing.T) {
+	pool := testPool(t)
+	docs := NewDocumentStore(pool)
+	ops := NewOperationStore(pool)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	docID := testDocumentID(t)
+	createTestDocument(t, ctx, docs, docID)
+
+	root := crdt.ElementID(crdt.RootID)
+	prev := root
+	var sequences []int64
+	for i := uint64(1); i <= 5; i++ {
+		op := crdt.InsertOperation{
+			OperationID: crdt.OperationID{ClientID: 1, Counter: i}, DocumentID: docID,
+			ClientID: 1, LogicalClock: i, ParentElementID: prev,
+			ElementID: crdt.ElementID{ClientID: 1, Counter: i}, Value: rune('a' + i - 1),
+		}
+		seq, err := ops.AppendOperation(ctx, op)
+		if err != nil {
+			t.Fatalf("AppendOperation %d failed: %v", i, err)
+		}
+		sequences = append(sequences, seq)
+		prev = op.ElementID
+	}
+
+	// First page: 2 rows, starting from the beginning.
+	page1, highest1, hasMore1, err := ops.LoadOperationsAfter(ctx, docID, 0, 2)
+	if err != nil {
+		t.Fatalf("LoadOperationsAfter (page 1) failed: %v", err)
+	}
+	if len(page1) != 2 {
+		t.Fatalf("page 1: expected 2 operations, got %d", len(page1))
+	}
+	if !hasMore1 {
+		t.Error("page 1: expected hasMore=true, got false")
+	}
+	if highest1 != sequences[1] {
+		t.Errorf("page 1: highestSequence = %d, want %d", highest1, sequences[1])
+	}
+
+	// Second page: continue from where page 1 left off.
+	page2, highest2, hasMore2, err := ops.LoadOperationsAfter(ctx, docID, highest1, 2)
+	if err != nil {
+		t.Fatalf("LoadOperationsAfter (page 2) failed: %v", err)
+	}
+	if len(page2) != 2 {
+		t.Fatalf("page 2: expected 2 operations, got %d", len(page2))
+	}
+	if !hasMore2 {
+		t.Error("page 2: expected hasMore=true, got false")
+	}
+	if highest2 != sequences[3] {
+		t.Errorf("page 2: highestSequence = %d, want %d", highest2, sequences[3])
+	}
+
+	// Final page: the remainder, hasMore should now be false.
+	page3, highest3, hasMore3, err := ops.LoadOperationsAfter(ctx, docID, highest2, 2)
+	if err != nil {
+		t.Fatalf("LoadOperationsAfter (page 3) failed: %v", err)
+	}
+	if len(page3) != 1 {
+		t.Fatalf("page 3: expected 1 operation, got %d", len(page3))
+	}
+	if hasMore3 {
+		t.Error("page 3: expected hasMore=false, got true")
+	}
+	if highest3 != sequences[4] {
+		t.Errorf("page 3: highestSequence = %d, want %d", highest3, sequences[4])
+	}
+
+	// Requesting after the very latest sequence should return nothing.
+	page4, highest4, hasMore4, err := ops.LoadOperationsAfter(ctx, docID, highest3, 2)
+	if err != nil {
+		t.Fatalf("LoadOperationsAfter (page 4, empty) failed: %v", err)
+	}
+	if len(page4) != 0 || hasMore4 || highest4 != 0 {
+		t.Errorf("expected an empty final page, got ops=%d hasMore=%v highest=%d", len(page4), hasMore4, highest4)
+	}
+}
+
 func TestOperationStore_AppendOperation_UnknownDocument_Errors(t *testing.T) {
 	pool := testPool(t)
 	ops := NewOperationStore(pool)
@@ -250,7 +352,7 @@ func TestOperationStore_AppendOperation_UnknownDocument_Errors(t *testing.T) {
 	// Expected to fail on the FOREIGN KEY constraint (operations.document_id
 	// -> documents.id) -- persisting an operation for a document that was
 	// never created should not silently succeed.
-	if err := ops.AppendOperation(ctx, op); err == nil {
+	if _, err := ops.AppendOperation(ctx, op); err == nil {
 		t.Fatal("expected an error appending an operation for a nonexistent document, got nil")
 	}
 }
