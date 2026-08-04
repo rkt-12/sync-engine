@@ -1,0 +1,55 @@
+{
+  "description": "Operations delivered in an order different from generation order, but still causally valid: the delete of 'b' arrives before 'b' itself (delete-before-insert), and the concurrent sibling 'X' (which has no dependency on 'b'/'c') arrives earlier than in generation order. 'a' still precedes 'b', and 'b' still precedes 'c', matching the causal-parent assumption inserts rely on.",
+  "documentId": "vector-doc",
+  "operations": [
+    {
+      "kind": "delete",
+      "operationId": { "clientId": 3, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 3,
+      "logicalClock": 1,
+      "targetElementId": { "clientId": 1, "counter": 2 }
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 2, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 2,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 2, "counter": 1 },
+      "value": "X"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 2 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 2,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 1, "counter": 2 },
+      "value": "b"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 3 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 3,
+      "parentElementId": { "clientId": 1, "counter": 2 },
+      "elementId": { "clientId": 1, "counter": 3 },
+      "value": "c"
+    }
+  ],
+  "expected": "acX"
+}

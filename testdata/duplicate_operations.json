@@ -1,0 +1,57 @@
+{
+  "description": "The same operations appear more than once in the delivery stream (simulating network-level retransmission). Both implementations must apply each operation_id's effect exactly once (Invariant 1).",
+  "documentId": "vector-doc",
+  "operations": [
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 2 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 2,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 1, "counter": 2 },
+      "value": "b"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 2 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 2,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 1, "counter": 2 },
+      "value": "b"
+    }
+  ],
+  "expected": "ab"
+}

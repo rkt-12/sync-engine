@@ -1,0 +1,25 @@
+{
+  "description": "A delete operation arrives before its target element has been inserted. Both implementations must record it as a pending tombstone and apply it the moment the insert arrives, resulting in an empty document.",
+  "documentId": "vector-doc",
+  "operations": [
+    {
+      "kind": "delete",
+      "operationId": { "clientId": 2, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 2,
+      "logicalClock": 1,
+      "targetElementId": { "clientId": 1, "counter": 1 }
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    }
+  ],
+  "expected": ""
+}

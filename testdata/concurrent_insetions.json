@@ -1,0 +1,37 @@
+{
+  "description": "Two clients concurrently insert immediately after 'a'. Neither has seen the other's operation when generating it. Both Go and TypeScript must resolve the tie the same way: equal counters, higher clientId sorts first (descending order).",
+  "documentId": "vector-doc",
+  "operations": [
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 1, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 1,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 0, "counter": 0 },
+      "elementId": { "clientId": 1, "counter": 1 },
+      "value": "a"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 2, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 2,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 2, "counter": 1 },
+      "value": "X"
+    },
+    {
+      "kind": "insert",
+      "operationId": { "clientId": 3, "counter": 1 },
+      "documentId": "vector-doc",
+      "clientId": 3,
+      "logicalClock": 1,
+      "parentElementId": { "clientId": 1, "counter": 1 },
+      "elementId": { "clientId": 3, "counter": 1 },
+      "value": "Y"
+    }
+  ],
+  "expected": "aYX"
+}
